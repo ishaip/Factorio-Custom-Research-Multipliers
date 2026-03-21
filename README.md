@@ -2,61 +2,102 @@
 
 > **Fork of [Research Multipliers](https://mods.factorio.com/mod/research-multipliers) by Xevion.**
 
-Fully customizable research cost multipliers for Factorio 2.0. Adjust cycle counts with global and infinite category multipliers, or fine-tune individual science pack costs per cycle. Works with science packs from **any** mod — base game, Space Age, Space Exploration, Krastorio 2, or anything else. Science packs are detected automatically from the technology tree.
+Take full control of your research costs in Factorio 2.0. Multiply cycle counts, scale individual science pack costs, or both — it's all up to you. Science packs from **any mod** are detected automatically.
 
-## How it works
+---
 
-The mod has **two types of multipliers** that work independently:
+## 🔬 Two Multiplier Systems
 
-### Category multipliers — change research cycle count
+### Category Multipliers — Scale Research Cycles
 
-These multiply the total number of research cycles. They accept decimal values.
+Multiply the total number of cycles a technology requires. Affects the **cycle count** directly.
 
-| Setting | Value | Effect on a 100-cycle tech |
-|---|---|---|
-| Global | 7 | `ceil(100 × 7)` = **700 cycles** (harder) |
-| Global | 1.0 | 100 cycles (no change) |
-| Global | 0.7 | `ceil(100 × 0.7)` = **70 cycles** (easier) |
+| Multiplier | Value | A 100-cycle tech becomes… |
+|:---|:---:|:---|
+| **Global** | `7` | `ceil(100 × 7)` = **700 cycles** — 7× harder |
+| **Global** | `1` | **100 cycles** — no change |
+| **Global** | `0.7` | `ceil(100 × 0.7)` = **70 cycles** — 30% easier |
 
-Available category multipliers:
-- **Global** — affects all technologies
-- **Infinite** — affects infinite research (formula-based technologies)
+| Category | Applies to |
+|:---|:---|
+| **Global** | All technologies |
+| **Infinite** | Formula-based infinite research only |
 
-Category multipliers stack multiplicatively. For example, Global=2 and Infinite=3 on infinite research → `ceil(count × 2 × 3)` = `ceil(count × 6)` = 6× harder.
+Category multipliers **stack multiplicatively**. Global=2 + Infinite=3 on infinite research → `ceil(count × 6)` = **6× the cycles**.
 
-### Per-pack multipliers — change packs per cycle
+---
 
-These multiply how many of a specific science pack are consumed per research cycle.
+### Per-Pack Multipliers — Scale Packs Per Cycle
 
-| Setting | Value | Effect |
-|---|---|---|
-| Logistic | 2 | Each cycle costs **2** logistic packs instead of 1 |
-| Chemical | 7 | Each cycle costs **7** chemical packs instead of 1 |
+Multiply how many of a specific science pack are consumed **per research cycle**.
 
-So a tech with 100 cycles, logistic=2, chemical=7 would cost:
-- **200** logistic packs total (100 × 2)
-- **700** chemical packs total (100 × 7)
-- Other packs stay at 100 total (100 × 1)
+Example — a tech with 100 cycles at default 1 pack per cycle:
 
-Per-pack amounts are capped at 65535 (Factorio engine limit) and rounded up to at least 1.
+| Pack | Multiplier | Per cycle | Total cost |
+|:---|:---:|:---:|:---|
+| [item=automation-science-pack] Automation | `1` | 1 | **100** packs |
+| [item=logistic-science-pack] Logistic | `2` | 2 | **200** packs |
+| [item=chemical-science-pack] Chemical | `7` | 7 | **700** packs |
+| [item=military-science-pack] Military | `0.5` | 1 *(min 1)* | **100** packs |
 
-## Supported mods
+Per-pack amounts are rounded up (minimum 1) and capped at **65,535** per the Factorio engine limit.
 
-Science packs with dedicated multiplier settings:
-- **Base game** — Automation, Logistic, Military, Chemical, Production, Utility, Space
-- **Space Age** — Metallurgic, Electromagnetic, Agricultural, Cryogenic, Promethium
-- **Space Exploration** — Rocket, Astronomic, Biological, Energy, Material, Deep Space (all tiers)
-- **Krastorio 2** — Optimization Tech, Singularity Tech
+---
 
-Packs from **any other mod** still receive category multipliers (global, infinite) automatically.
+## 🧪 Supported Science Packs
 
-## Installation
+Every pack listed below gets its own dedicated multiplier setting in **Settings → Startup**.
 
-1. Drop the zip into `%appdata%\Factorio\mods` or install via the in-game mod portal.
-2. Open **Settings → Startup**. Multiplier settings appear for every detected science pack.
-3. Adjust values and restart the game.
+### Base Game
+| | Pack | Setting |
+|:---|:---|:---|
+| [item=automation-science-pack] | Automation Science | `automation-science-multiplier` |
+| [item=logistic-science-pack] | Logistic Science | `logistic-science-multiplier` |
+| [item=military-science-pack] | Military Science | `military-science-multiplier` |
+| [item=chemical-science-pack] | Chemical Science | `chemical-science-multiplier` |
+| [item=production-science-pack] | Production Science | `production-science-multiplier` |
+| [item=utility-science-pack] | Utility Science | `utility-science-multiplier` |
+| [item=space-science-pack] | Space Science | `space-science-multiplier` |
 
-## Adding support for a new mod
+### Space Age
+| | Pack | Setting |
+|:---|:---|:---|
+| [item=metallurgic-science-pack] | Metallurgic Science | `metallurgic-science-multiplier` |
+| [item=electromagnetic-science-pack] | Electromagnetic Science | `electromagnetic-science-multiplier` |
+| [item=agricultural-science-pack] | Agricultural Science | `agricultural-science-multiplier` |
+| [item=cryogenic-science-pack] | Cryogenic Science | `cryogenic-science-multiplier` |
+| [item=promethium-science-pack] | Promethium Science | `promethium-science-multiplier` |
+
+### Space Exploration
+| | Pack | Setting |
+|:---|:---|:---|
+| [item=se-rocket-science-pack] | Rocket Science | `se-rocket-science-multiplier` |
+| [item=se-astronomic-science-pack-1] | Astronomic Science (all tiers) | `se-astronomic-science-multiplier` |
+| [item=se-biological-science-pack-1] | Biological Science (all tiers) | `se-biological-science-multiplier` |
+| [item=se-energy-science-pack-1] | Energy Science (all tiers) | `se-energy-science-multiplier` |
+| [item=se-material-science-pack-1] | Material Science (all tiers) | `se-material-science-multiplier` |
+| [item=se-deep-space-science-pack-1] | Deep Space Science (all tiers) | `se-deep-space-science-multiplier` |
+
+### Krastorio 2
+| | Pack | Setting |
+|:---|:---|:---|
+| [item=kr-optimization-tech-card] | Optimization Tech Card | `kr-optimization-tech-multiplier` |
+| [item=kr-singularity-tech-card] | Singularity Tech Card | `kr-singularity-tech-multiplier` |
+
+> **Other mods?** Packs from any mod are still affected by **category multipliers** (global, infinite) automatically — no configuration needed. To add dedicated per-pack settings, see *Adding support for a new mod* below.
+
+---
+
+## 📦 Installation
+
+1. Download from the [mod portal](https://mods.factorio.com) or drop the zip into your Factorio mods folder.
+2. Launch Factorio → **Settings → Startup**.
+3. Adjust multipliers for each science pack and category.
+4. Restart the game — changes apply at load time.
+
+---
+
+## 🔧 Adding Support for a New Mod
 
 Edit `pack-definitions.lua` and add an entry to the `known_mods` table:
 
@@ -69,9 +110,18 @@ Edit `pack-definitions.lua` and add an entry to the `known_mods` table:
 },
 ```
 
-Then add locale strings in `locale/en/locale.cfg` under `[mod-setting-name]` and `[mod-setting-description]`.
+Then add locale strings in `locale/en/locale.cfg`:
 
-## Categories
+```ini
+[mod-setting-name]
+your-science-multiplier=[item=your-science-pack] Your Science Multiplier
 
-- **Global** — applies to all technologies.
-- **Infinite** — all formula-based infinite research (excludes finite-level upgrades like inserter capacity 1-6).
+[mod-setting-description]
+your-science-multiplier=Multiplies [item=your-science-pack] Your packs per cycle.
+```
+
+---
+
+## 📜 Credits
+
+Forked from [Research Multipliers](https://mods.factorio.com/mod/research-multipliers) by **Xevion**.

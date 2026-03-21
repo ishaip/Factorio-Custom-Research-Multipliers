@@ -71,7 +71,19 @@ for /f "delims=" %%i in ('dir /b /ad') do (
 
 echo Creating zip archive: !zipname!
 
-powershell -Command "Compress-Archive -Path '!foldername!' -DestinationPath '!zipname!' -Force"
+REM Create zip with forward slashes using .NET (compatible with Factorio mod portal)
+powershell -Command ^
+  "Add-Type -AssemblyName System.IO.Compression.FileSystem; " ^
+  "$folder = '!foldername!'; " ^
+  "$zipPath = (Join-Path $PWD '!zipname!'); " ^
+  "if (Test-Path $zipPath) { Remove-Item $zipPath }; " ^
+  "$zip = [System.IO.Compression.ZipFile]::Open($zipPath, 'Create'); " ^
+  "Get-ChildItem $folder -Recurse -File | ForEach-Object { " ^
+  "  $entry = $_.FullName.Substring((Resolve-Path $PWD).Path.Length + 1).Replace('\', '/'); " ^
+  "  [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $_.FullName, $entry) | Out-Null " ^
+  "}; " ^
+  "$zip.Dispose(); " ^
+  "Write-Host 'Created' $zipPath"
 
 REM Deploy to Factorio mods folder
 copy /Y "!zipname!" "!target!\!zipname!"
