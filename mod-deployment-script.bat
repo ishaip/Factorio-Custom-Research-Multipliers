@@ -73,11 +73,15 @@ echo Creating zip archive: !zipname!
 
 powershell -Command "Compress-Archive -Path '!foldername!' -DestinationPath '!zipname!' -Force"
 
+REM Deploy to Factorio mods folder
 copy /Y "!zipname!" "!target!\!zipname!"
 
 REM Clean up temporary folder
 rmdir /s /q "!foldername!"
 
-echo Deployment complete: !zipname! copied to !target!
+echo.
+echo Deployment complete:
+echo   Factorio mods: !target!\!zipname!
+echo   Portal upload: !zipname!
 pause
 endlocal

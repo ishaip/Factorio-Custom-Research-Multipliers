@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------------------------------
-Version: 0.3.0
+Version: 1.0.0
 Date: 2026-03-21
   Info:
     - Fork of Research Multipliers by Xevion (https://mods.factorio.com/mod/research-multipliers)
