@@ -1,4 +1,17 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.3.0
+Date: 2026-03-21
+  Info:
+    - Fork of Research Multipliers by Xevion (https://mods.factorio.com/mod/research-multipliers)
+  Major Features:
+    - made mod generic: science packs from any mod are now supported
+    - added automatic detection of Space Exploration science packs
+    - added automatic detection of Krastorio 2 science packs
+    - added pack-definitions.lua module for easy addition of new mods
+    - multipliers now change packs-per-cycle instead of total research count
+  Minor Features:
+    - dynamic settings generation based on which mods are active
+---------------------------------------------------------------------------------------------------
 Version: 0.2.0
 Date: 2025-04-17
   Bugfixes:
@@ -10,5 +23,5 @@ Version: 0.1.0
 Date: 2024-12-12
   Major Features:
     - initial release
-    - added Global, Essential, Interplanetary & Infinite Research Multipliers
+    - added Global & Infinite Research Multipliers
     - added Science Pack Research Multipliers

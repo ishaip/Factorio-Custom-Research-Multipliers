@@ -1,253 +1,135 @@
-local is_space_age_available = mods['space-age'] ~= nil
+local pack_config = require("pack-definitions")
 
-local multiplier_mode = "override";
-
+-- Read category multipliers from settings
 local global_multiplier = settings.startup["global-multiplier"].value
-local essential_research_multiplier = settings.startup["essential-research-multiplier"].value
 local infinite_research_multiplier = settings.startup["infinite-research-multiplier"].value
 
-local interplanetary_research_multiplier = 1;
-local planet_discovery_research_multiplier = 1;
-if is_space_age_available then
-    interplanetary_research_multiplier = settings.startup["interplanetary-research-multiplier"].value
-    planet_discovery_research_multiplier = settings.startup["planet-discovery-research-multiplier"].value
-end
+-- Build pack -> setting name map from pack-definitions (covers known mods)
+local pack_to_setting = pack_config.get_pack_to_setting_map()
 
-local science_pack_multiplier_ids = {
-    "automation-science-multiplier",
-    "logistic-science-multiplier",
-    "military-science-multiplier",
-    "chemical-science-multiplier",
-    "production-science-multiplier",
-    "utility-science-multiplier",
-    "space-science-multiplier",
-};
-
-if is_space_age_available then
-    for _, id in pairs({
-        "metallurgic-science-multiplier",
-        "electromagnetic-science-multiplier",
-        "agricultural-science-multiplier",
-        "cryogenic-science-multiplier",
-        "promethium-science-multiplier",
-    }) do
-        table.insert(science_pack_multiplier_ids, id);
-    end
-end
-
-local science_pack_multipliers = {};
-for _, id in pairs(science_pack_multiplier_ids) do
-    science_pack_multipliers[id] = settings.startup[id].value;
-end
-
-local science_pack_multiplier_translation = {
-    ["automation-science-pack"] = "automation-science-multiplier",
-    ["logistic-science-pack"] = "logistic-science-multiplier",
-    ["military-science-pack"] = "military-science-multiplier",
-    ["chemical-science-pack"] = "chemical-science-multiplier",
-    ["production-science-pack"] = "production-science-multiplier",
-    ["utility-science-pack"] = "utility-science-multiplier",
-    ["space-science-pack"] = "space-science-multiplier",
-    ["metallurgic-science-pack"] = "metallurgic-science-multiplier",
-    ["electromagnetic-science-pack"] = "electromagnetic-science-multiplier",
-    ["agricultural-science-pack"] = "agricultural-science-multiplier",
-    ["cryogenic-science-pack"] = "cryogenic-science-multiplier",
-    ["promethium-science-pack"] = "promethium-science-multiplier",
-}
-
--- optimization step: remove translations for multipliers that are 1.0 (default)
-for pack_item, multiplier_key in pairs(science_pack_multiplier_translation) do
-    local multiplier = science_pack_multipliers[multiplier_key];
-    if multiplier == 1.0 then
-        science_pack_multiplier_translation[pack_item] = nil;
-    end
-end
-
-function as_set(table)
-    local set = {}
-    for _, v in pairs(table) do
-        set[v] = true
-    end
-    return set
-end
-
--- as defined by Factorio's technology tree; yes, some of this is redundant as they're trigger-based, but I would rather be technically correct
-local essential_research = as_set({
-    "automation-science-pack",
-    "logistic-science-pack",
-    "military-science-pack",
-    "chemical-science-pack",
-    "production-science-pack",
-    "utility-science-pack",
-    "rocket-silo",
-    "space-science-pack",
-    "planet-discovery-vulcanus",
-    "metallurgic-science-pack",
-    "planet-discovery-fulgora",
-    "electromagnetic-science-pack",
-    "planet-discovery-gleba",
-    "agricultural-science-pack",
-    "planet-discovery-aquilo",
-    "cryogenic-science-pack",
-    "promethium-science-pack",
-});
-
--- used for 'pack' multiplier mode
-local science_packs = {
-    "automation-science-pack",
-    "logistic-science-pack",
-    "military-science-pack",
-    "chemical-science-pack",
-    "production-science-pack",
-    "utility-science-pack",
-    "space-science-pack",
-    "metallurgic-science-pack",
-    "electromagnetic-science-pack",
-    "agricultural-science-pack",
-    "cryogenic-science-pack",
-    "promethium-science-pack",
-}
-
--- used for detecting interplanetary research
-local interplanetary_science_packs = as_set({
-    "metallurgic-science-pack",
-    "electromagnetic-science-pack",
-    "agricultural-science-pack",
-    "cryogenic-science-pack",
-    "promethium-science-pack",
-})
-
-function table.contains(table, element)
-    for _, value in pairs(table) do
-        if value == element then
-            return true
+-- Read per-pack multiplier values from settings, keyed by setting name
+local science_pack_multipliers = {}
+for pack_name, setting_name in pairs(pack_to_setting) do
+    if science_pack_multipliers[setting_name] == nil then
+        local ok, setting = pcall(function() return settings.startup[setting_name] end)
+        if ok and setting then
+            science_pack_multipliers[setting_name] = setting.value
+        else
+            science_pack_multipliers[setting_name] = 1.0
         end
     end
-    return false
 end
 
-function is_essential_research(name)
-    return essential_research[name] == true;
+-- Discover ALL unique science packs used across all technologies (generic scan)
+local discovered_packs = {}
+for _, technology in pairs(data.raw.technology) do
+    if technology.unit and technology.unit.ingredients then
+        for _, ingredient in pairs(technology.unit.ingredients) do
+            local pack_name = ingredient[1] or ingredient.name
+            if pack_name then
+                discovered_packs[pack_name] = true
+            end
+        end
+    end
 end
 
--- infinite research generally has a finite number of defined 'levels', ones that don't have a formula. this function does not account for them.
+log("Discovered " .. table_size(discovered_packs) .. " unique science packs across all technologies:")
+for pack_name, _ in pairs(discovered_packs) do
+    local mapped = pack_to_setting[pack_name] and (" -> " .. pack_to_setting[pack_name]) or " (no per-pack setting)"
+    log("  " .. pack_name .. mapped)
+end
+
 function is_infinite_research(name)
-    return data.raw.technology[name].unit.count == nil;
-end
-
--- This function expects that the technology exists, and follows the TechnologyUnit type specification properly
-function is_interplanetary_research(name)
-    local technology = data.raw.technology[name];
-
-    if technology.unit == nil then
-        return false;
-    end
-
-    for _, ingredient in pairs(technology.unit.ingredients) do
-        if interplanetary_science_packs[ingredient[1]] then
-            return true;
-        end
-    end
-
-    return false;
-end
-
-function is_planet_discovery_research(name)
-    local start = string.find(name, "planet-discovery-", 1, true)
-    return start == 1;
-end
-
-function multiply(current, next)
-    if multiplier_mode == "override" then
-        return next;
-    elseif multiplier_mode == "multiply" then
-        return current * next;
-    elseif multiplier_mode == "add" then
-        return current + (next - 1);
-    end
+    local tech = data.raw.technology[name]
+    return tech and tech.unit and tech.unit.count == nil
 end
 
 function calculate(name, technology)
-    -- Skip trigger technology, or technologies that don't properly provide a `unit`, `unit.ingredients`, or `unit.count` property
-    if (technology.research_trigger ~= nil) then
-        return;
-    elseif (technology.unit == nil or technology.unit.ingredients == nil) then
-        log("Skipping non-trigger technology \"" ..
-            name .. "\" because it doesn't properly define a unit, it's ingredients, and/or a count.")
+    -- Skip trigger-based technologies or those without proper unit definitions
+    if technology.research_trigger ~= nil then
+        return
+    elseif technology.unit == nil or technology.unit.ingredients == nil then
+        log("Skipping technology \"" .. name .. "\": no unit or ingredients defined.")
+        return
     end
 
-    -- default to the global multiplier
-    local multiplier = global_multiplier;
+    -- =========================================================================
+    -- Phase 1: Category multipliers modify TOTAL RESEARCH COUNT (cycles)
+    --          Formula: ceil(count * multiplier)
+    --          multiplier > 1 = more expensive, multiplier < 1 = cheaper
+    -- =========================================================================
+    local count_multiplier = 1.0
 
-    -- essential research
-    if (essential_research_multiplier ~= 1 and is_essential_research(name)) then
-        multiplier = multiply(multiplier, essential_research_multiplier);
+    if global_multiplier ~= 1 then
+        count_multiplier = count_multiplier * global_multiplier
     end
 
-    -- infinite research
-    if (infinite_research_multiplier ~= 1 and is_infinite_research(name)) then
-        multiplier = multiply(multiplier, infinite_research_multiplier);
+    if infinite_research_multiplier ~= 1 and is_infinite_research(name) then
+        count_multiplier = count_multiplier * infinite_research_multiplier
     end
 
-    -- interplanetary research
-    if (interplanetary_research_multiplier ~= 1 and is_interplanetary_research(name)) then
-        multiplier = multiply(multiplier, interplanetary_research_multiplier);
+    -- Apply category multiplier to research count
+    if count_multiplier ~= 1.0 and count_multiplier > 0 then
+        if technology.unit.count_formula then
+            -- Formula-based (infinite research)
+            technology.unit.count_formula = 'max(1, (' .. technology.unit.count_formula .. ')*' .. count_multiplier .. ')'
+            log(name .. " : formula adjusted by x" .. count_multiplier)
+        elseif technology.unit.count then
+            local original_count = technology.unit.count
+            technology.unit.count = math.max(math.ceil(original_count * count_multiplier), 1)
+            log(name .. " : count " .. original_count .. " -> " .. technology.unit.count .. " (x" .. count_multiplier .. ")")
+        end
     end
 
-    -- planet discovery research
-    if (planet_discovery_research_multiplier ~= 1 and is_planet_discovery_research(name)) then
-        multiplier = multiply(multiplier, planet_discovery_research_multiplier);
-    end
-
-    -- science pack multiplier (flat, not ingredient-based)
+    -- =========================================================================
+    -- Phase 2: Per-pack multipliers modify PACKS PER CYCLE (ingredient amounts)
+    --          Formula: ceil(amount * multiplier), capped at 65535
+    -- =========================================================================
+    local any_ingredient_changed = false
     for _, ingredient in pairs(technology.unit.ingredients) do
-        local ingredient_multiplier_id = science_pack_multiplier_translation[ingredient[1]];
+        local pack_name = ingredient[1] or ingredient.name
+        local original_amount = ingredient[2] or ingredient.amount or 1
 
-        if ingredient_multiplier_id ~= nil then
-            local pack_multiplier = science_pack_multipliers[ingredient_multiplier_id];
-            multiplier = multiply(multiplier, pack_multiplier);
+        local ingredient_multiplier = 1.0
+
+        -- Look up per-pack multiplier for this specific pack
+        if pack_name then
+            local setting_name = pack_to_setting[pack_name]
+            if setting_name then
+                local pack_multiplier = science_pack_multipliers[setting_name]
+                if pack_multiplier and pack_multiplier ~= 1.0 then
+                    ingredient_multiplier = pack_multiplier
+                end
+            end
+        end
+
+        -- Apply per-pack multiplier to ingredient amount
+        if ingredient_multiplier ~= 1 and ingredient_multiplier > 0 then
+            -- Factorio caps ingredient amounts at uint16 (65535)
+            local new_amount = math.min(math.max(math.ceil(original_amount * ingredient_multiplier), 1), 65535)
+
+            -- Update both array-style [2] and named .amount for compatibility
+            if ingredient[2] then
+                ingredient[2] = new_amount
+            end
+            if ingredient.amount then
+                ingredient.amount = new_amount
+            end
+            if not ingredient[2] and not ingredient.amount then
+                ingredient[2] = new_amount
+            end
+
+            any_ingredient_changed = true
+            log(name .. " : " .. (pack_name or "?") .. " " .. original_amount .. " -> " .. new_amount .. " (x" .. ingredient_multiplier .. ")")
         end
     end
 
-    -- debug printing
-    if (technology.unit) then
-        if (technology.unit.count ~= nil) then
-            log(name .. " : " .. technology.unit.count .. " -> x" .. multiplier)
-        else
-            log(name .. " : " .. '??' .. " -> x" .. multiplier)
-        end
-    end
-
-    -- TODO: Reduce multiplier precision to 3 decimal places
-
-    -- don't apply multiplier if it would do nothing
-    if (multiplier == 1) then
-        return
-    elseif (multiplier <= 0) then
-        log("Multiplier is less than 0, skipping " .. name .. " (" .. multiplier .. ")")
-        return
-    end
-
-    -- Multiplier has been calculated, apply it
-    if (technology.unit.count_formula) then
-        -- formula-based
-        if (multiplier < 1) then
-            -- if multiplier is less than 100%, we need to ensure the result is at least 1
-            -- MathExpression has a max() function for formulas
-            technology.unit.count_formula = 'max(1, ' .. technology.unit.count_formula .. ')*' .. multiplier
-        else
-            technology.unit.count_formula = '(' .. technology.unit.count_formula .. ')*' .. multiplier
-        end
-    else
-        -- simple count
-        if (multiplier < 1) then
-            technology.unit.count = math.max(math.ceil(technology.unit.count * multiplier), 1)
-        else
-            technology.unit.count = technology.unit.count * multiplier;
-        end
+    if not any_ingredient_changed and count_multiplier == 1.0 then
+        log(name .. " : no changes")
     end
 end
 
+-- Process ALL technologies generically
 for name, technology in pairs(data.raw.technology) do
     xpcall(calculate, function(err)
         log("Error in technology " .. name .. ": " .. err)

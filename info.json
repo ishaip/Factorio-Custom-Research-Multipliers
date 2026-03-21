@@ -1,14 +1,16 @@
 {
-  "name": "research-multipliers",
-  "version": "0.2.0",
-  "title": "Research Multipliers",
-  "author": "Xevion",
-  "homepage": "https://github.com/Xevion/research-multipliers",
-  "description": "Advanced customizable multipliers for research, including pack, category, infinite, and individual technology multipliers.",
+  "name": "Custom-Research-Multipliers",
+  "version": "0.3.0",
+  "title": "Custom Research Multipliers",
+  "author": "Xevion (forked)",
+  "homepage": "https://mods.factorio.com/mod/research-multipliers",
+  "description": "Fully customizable research cost multipliers for Factorio 2.0. Category multipliers (global, infinite) multiply the total research cycle count, while per-pack multipliers scale how many packs are needed per cycle. Automatically detects science packs from any mod.",
   "factorio_version": "2.0",
   "dependencies": [
     "base >= 2.0.0",
-    "? space-age"
+    "? space-age",
+    "? space-exploration",
+    "? Krastorio2"
   ],
   "quality_required": false,
   "space_travel_required": false,
