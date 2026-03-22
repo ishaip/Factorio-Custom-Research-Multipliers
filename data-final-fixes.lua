@@ -83,74 +83,87 @@ function calculate(name, technology)
     end
 
     -- =========================================================================
-    -- Phase 2: Per-pack multipliers modify PACKS PER CYCLE (ingredient amounts)
-    --          Formula: ceil(amount * multiplier), capped at 65535
+    -- Phase 2: Per-pack multipliers
+    --   Default mode: modify PACKS PER CYCLE (ingredient amounts)
+    --   Toggle mode:  leave ingredients alone, scale research TIME instead
     -- =========================================================================
-    local any_ingredient_changed = false
-    for _, ingredient in pairs(technology.unit.ingredients) do
-        local pack_name = ingredient[1] or ingredient.name
-        local original_amount = ingredient[2] or ingredient.amount or 1
+    local any_changed = false
 
-        local ingredient_multiplier = 1.0
-
-        -- Look up per-pack multiplier for this specific pack
-        if pack_name then
-            local setting_name = pack_to_setting[pack_name]
-            if setting_name then
-                local pack_multiplier = science_pack_multipliers[setting_name]
-                if pack_multiplier and pack_multiplier ~= 1.0 then
-                    ingredient_multiplier = pack_multiplier
-                end
-            end
-        end
-
-        -- Apply per-pack multiplier to ingredient amount
-        if ingredient_multiplier ~= 1 and ingredient_multiplier > 0 then
-            -- Factorio caps ingredient amounts at uint16 (65535)
-            local new_amount = math.min(math.max(math.ceil(original_amount * ingredient_multiplier), 1), 65535)
-
-            -- Update both array-style [2] and named .amount for compatibility
-            if ingredient[2] then
-                ingredient[2] = new_amount
-            end
-            if ingredient.amount then
-                ingredient.amount = new_amount
-            end
-            if not ingredient[2] and not ingredient.amount then
-                ingredient[2] = new_amount
-            end
-
-            any_ingredient_changed = true
-            log(name .. " : " .. (pack_name or "?") .. " " .. original_amount .. " -> " .. new_amount .. " (x" .. ingredient_multiplier .. ")")
-        end
-    end
-
-    -- =========================================================================
-    -- Phase 3: Scale research time by average pack cost (optional)
-    --          When enabled, research time scales proportionally to the
-    --          average ingredient amount across the packs this tech uses.
-    --          Formula: new_time = original_time * (sum_of_amounts / num_packs)
-    -- =========================================================================
-    if scale_time_by_pack_cost and any_ingredient_changed then
-        local total_amount = 0
+    if scale_time_by_pack_cost then
+        -- Collect the effective multiplied amounts for packs in this recipe,
+        -- but do NOT modify the actual ingredient amounts.
+        local total_effective_amount = 0
         local num_packs = 0
         for _, ingredient in pairs(technology.unit.ingredients) do
-            local amount = ingredient[2] or ingredient.amount or 1
-            total_amount = total_amount + amount
+            local pack_name = ingredient[1] or ingredient.name
+            local original_amount = ingredient[2] or ingredient.amount or 1
+
+            local ingredient_multiplier = 1.0
+            if pack_name then
+                local setting_name = pack_to_setting[pack_name]
+                if setting_name then
+                    local pack_multiplier = science_pack_multipliers[setting_name]
+                    if pack_multiplier and pack_multiplier ~= 1.0 then
+                        ingredient_multiplier = pack_multiplier
+                    end
+                end
+            end
+
+            total_effective_amount = total_effective_amount + (original_amount * ingredient_multiplier)
             num_packs = num_packs + 1
         end
 
         if num_packs > 0 then
-            local time_multiplier = total_amount / num_packs
+            local time_multiplier = total_effective_amount / num_packs
             if time_multiplier ~= 1.0 then
                 local original_time = technology.unit.time
                 technology.unit.time = math.max(math.ceil(original_time * time_multiplier), 1)
-                log(name .. " : time " .. original_time .. " -> " .. technology.unit.time .. " (avg pack cost " .. time_multiplier .. ")")
+                any_changed = true
+                log(name .. " : time " .. original_time .. " -> " .. technology.unit.time .. " (avg effective pack cost " .. time_multiplier .. ")")
+            end
+        end
+    else
+        -- Default behaviour: scale ingredient amounts per cycle
+        for _, ingredient in pairs(technology.unit.ingredients) do
+            local pack_name = ingredient[1] or ingredient.name
+            local original_amount = ingredient[2] or ingredient.amount or 1
+
+            local ingredient_multiplier = 1.0
+
+            -- Look up per-pack multiplier for this specific pack
+            if pack_name then
+                local setting_name = pack_to_setting[pack_name]
+                if setting_name then
+                    local pack_multiplier = science_pack_multipliers[setting_name]
+                    if pack_multiplier and pack_multiplier ~= 1.0 then
+                        ingredient_multiplier = pack_multiplier
+                    end
+                end
+            end
+
+            -- Apply per-pack multiplier to ingredient amount
+            if ingredient_multiplier ~= 1 and ingredient_multiplier > 0 then
+                -- Factorio caps ingredient amounts at uint16 (65535)
+                local new_amount = math.min(math.max(math.ceil(original_amount * ingredient_multiplier), 1), 65535)
+
+                -- Update both array-style [2] and named .amount for compatibility
+                if ingredient[2] then
+                    ingredient[2] = new_amount
+                end
+                if ingredient.amount then
+                    ingredient.amount = new_amount
+                end
+                if not ingredient[2] and not ingredient.amount then
+                    ingredient[2] = new_amount
+                end
+
+                any_changed = true
+                log(name .. " : " .. (pack_name or "?") .. " " .. original_amount .. " -> " .. new_amount .. " (x" .. ingredient_multiplier .. ")")
             end
         end
     end
 
-    if not any_ingredient_changed and count_multiplier == 1.0 then
+    if not any_changed and count_multiplier == 1.0 then
         log(name .. " : no changes")
     end
 end
