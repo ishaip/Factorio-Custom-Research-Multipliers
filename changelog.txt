@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.1.0
+Date: 2026-03-22
+  Features:
+    - added "Scale Research Time by Pack Cost" toggle setting
+    - when enabled, research time per cycle scales proportionally to the average ingredient amount
+    - only packs that are part of a technology's original recipe affect the time calculation
+---------------------------------------------------------------------------------------------------
 Version: 1.0.0
 Date: 2026-03-21
   Info:

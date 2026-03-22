@@ -3,6 +3,7 @@ local pack_config = require("pack-definitions")
 -- Read category multipliers from settings
 local global_multiplier = settings.startup["global-multiplier"].value
 local infinite_research_multiplier = settings.startup["infinite-research-multiplier"].value
+local scale_time_by_pack_cost = settings.startup["scale-time-by-pack-cost"].value
 
 -- Build pack -> setting name map from pack-definitions (covers known mods)
 local pack_to_setting = pack_config.get_pack_to_setting_map()
@@ -121,6 +122,31 @@ function calculate(name, technology)
 
             any_ingredient_changed = true
             log(name .. " : " .. (pack_name or "?") .. " " .. original_amount .. " -> " .. new_amount .. " (x" .. ingredient_multiplier .. ")")
+        end
+    end
+
+    -- =========================================================================
+    -- Phase 3: Scale research time by average pack cost (optional)
+    --          When enabled, research time scales proportionally to the
+    --          average ingredient amount across the packs this tech uses.
+    --          Formula: new_time = original_time * (sum_of_amounts / num_packs)
+    -- =========================================================================
+    if scale_time_by_pack_cost and any_ingredient_changed then
+        local total_amount = 0
+        local num_packs = 0
+        for _, ingredient in pairs(technology.unit.ingredients) do
+            local amount = ingredient[2] or ingredient.amount or 1
+            total_amount = total_amount + amount
+            num_packs = num_packs + 1
+        end
+
+        if num_packs > 0 then
+            local time_multiplier = total_amount / num_packs
+            if time_multiplier ~= 1.0 then
+                local original_time = technology.unit.time
+                technology.unit.time = math.max(math.ceil(original_time * time_multiplier), 1)
+                log(name .. " : time " .. original_time .. " -> " .. technology.unit.time .. " (avg pack cost " .. time_multiplier .. ")")
+            end
         end
     end
 

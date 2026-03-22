@@ -7,6 +7,17 @@ local category_settings = {
     "infinite-research-multiplier",
 }
 
+-- Boolean toggles
+local toggle_settings = {
+    {
+        type = "bool-setting",
+        name = "scale-time-by-pack-cost",
+        setting_type = "startup",
+        order = "a-toggle",
+        default_value = false,
+    },
+}
+
 -- helper function for acquiring a stable ordering string
 function get_order(value)
     local result = ""
@@ -21,6 +32,11 @@ function get_order(value)
 end
 
 local all_settings = {}
+
+-- Toggle settings
+for _, setting in pairs(toggle_settings) do
+    table.insert(all_settings, setting)
+end
 
 -- Category settings (global, infinite)
 for index, setting_name in pairs(category_settings) do
